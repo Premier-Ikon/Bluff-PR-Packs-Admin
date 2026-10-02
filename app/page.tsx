@@ -126,6 +126,7 @@ export default function AdminPage() {
                   </div>
                   <p className="request-meta">
                     {request.email}
+                    {request.phone ? ` · ${request.phone}` : ""}
                     {request.createdAt ? ` · ${formatWhen(request.createdAt)}` : ""}
                     {` · ${pieces} piece${pieces === 1 ? "" : "s"}`}
                   </p>

@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { AdminChrome } from "../../components/AdminChrome";
 import { adminApi, type PrRequest } from "../../lib/api";
 import { useAuth } from "../../lib/AuthProvider";
 import { STATUSES, formatWhen, pieceCount, shipLine } from "../../lib/requestHelpers";
+
+const CARRIERS = ["UPS", "USPS", "FedEx", "DHL", "Other"];
 
 function formatReserveDate(value: string | null | undefined) {
   if (!value) return "";
@@ -29,7 +31,13 @@ export default function RequestDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [savingTracking, setSavingTracking] = useState(false);
   const [holdDays, setHoldDays] = useState(7);
+  const [trackingCarrier, setTrackingCarrier] = useState("UPS");
+  const [trackingNumber, setTrackingNumber] = useState("");
+  const [trackingUrl, setTrackingUrl] = useState("");
+  const [shippingNote, setShippingNote] = useState("");
+  const [notifyCustomer, setNotifyCustomer] = useState(true);
 
   useEffect(() => {
     if (!token || !id) return;
@@ -52,6 +60,10 @@ export default function RequestDetailPage() {
         }
         if (cancelled || !next) return;
         setRequest(next);
+        setTrackingCarrier(next.trackingCarrier || "UPS");
+        setTrackingNumber(next.trackingNumber || "");
+        setTrackingUrl(next.trackingUrl || "");
+        setShippingNote(next.shippingNote || "");
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : "Could not load request.");
       } finally {
@@ -103,8 +115,38 @@ export default function RequestDetailPage() {
     }
   }
 
+  async function onSaveTracking(event: FormEvent) {
+    event.preventDefault();
+    if (!token || !request) return;
+    setSavingTracking(true);
+    setError("");
+    setNotice("");
+    try {
+      const payload = await adminApi<{ request: PrRequest; message?: string }>(token, {
+        action: "updateTracking",
+        id: request.id,
+        trackingCarrier,
+        trackingNumber,
+        trackingUrl,
+        shippingNote,
+        notify: notifyCustomer,
+      });
+      setRequest(payload.request);
+      setTrackingCarrier(payload.request.trackingCarrier || trackingCarrier);
+      setTrackingNumber(payload.request.trackingNumber || trackingNumber);
+      setTrackingUrl(payload.request.trackingUrl || trackingUrl);
+      setShippingNote(payload.request.shippingNote || shippingNote);
+      setNotice(payload.message || "Tracking saved.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save tracking.");
+    } finally {
+      setSavingTracking(false);
+    }
+  }
+
   const pieces = request ? pieceCount(request) : 0;
   const hasOrder = Boolean(request?.shopifyOrderId);
+  const hasTracking = Boolean(request?.trackingNumber);
 
   return (
     <AdminChrome>
@@ -127,6 +169,12 @@ export default function RequestDetailPage() {
                     <h1>{request.name}</h1>
                     <p className="request-meta">
                       <a href={`mailto:${request.email}`}>{request.email}</a>
+                      {request.phone ? (
+                        <>
+                          {" · "}
+                          <a href={`tel:${request.phone}`}>{request.phone}</a>
+                        </>
+                      ) : null}
                       {request.createdAt ? ` · ${formatWhen(request.createdAt)}` : ""}
                       {` · ${pieces} piece${pieces === 1 ? "" : "s"}`}
                     </p>
@@ -137,6 +185,7 @@ export default function RequestDetailPage() {
                     </span>
                     {request.emailed ? <span className="pill is-ok">Emailed</span> : null}
                     {hasOrder ? <span className="pill is-ok">Reserved</span> : null}
+                    {hasTracking ? <span className="pill is-ok">Tracked</span> : null}
                   </div>
                 </div>
 
@@ -148,6 +197,17 @@ export default function RequestDetailPage() {
                   <div>
                     <p className="section-label">Details</p>
                     <p className="detail-copy">
+                      {request.phone ? (
+                        <>
+                          <a href={`tel:${request.phone}`}>{request.phone}</a>
+                          <br />
+                        </>
+                      ) : (
+                        <>
+                          No phone
+                          <br />
+                        </>
+                      )}
                       {request.company || "—"}
                       <br />
                       {request.instagram || "No Instagram"}
@@ -207,6 +267,87 @@ export default function RequestDetailPage() {
                   </select>
                 </label>
                 <p className="muted tiny">ID {request.id}</p>
+              </section>
+
+              <section className="panel side-panel">
+                <p className="section-label">Shipping</p>
+                <p className="detail-copy side-copy">
+                  Add a tracking number to email the customer that their PR pack is on the way.
+                </p>
+                <form className="tracking-form" onSubmit={(event) => void onSaveTracking(event)}>
+                  <label className="side-label">
+                    Carrier
+                    <select
+                      value={trackingCarrier}
+                      onChange={(event) => setTrackingCarrier(event.target.value)}
+                    >
+                      {CARRIERS.map((carrier) => (
+                        <option key={carrier} value={carrier}>
+                          {carrier}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="side-label">
+                    Tracking number
+                    <input
+                      value={trackingNumber}
+                      onChange={(event) => setTrackingNumber(event.target.value)}
+                      required
+                      placeholder="1Z…"
+                      autoComplete="off"
+                    />
+                  </label>
+                  <label className="side-label">
+                    Tracking link
+                    <input
+                      value={trackingUrl}
+                      onChange={(event) => setTrackingUrl(event.target.value)}
+                      placeholder="Optional — auto-filled for UPS / USPS / FedEx / DHL"
+                      autoComplete="off"
+                    />
+                  </label>
+                  <label className="side-label">
+                    Note to customer
+                    <textarea
+                      value={shippingNote}
+                      onChange={(event) => setShippingNote(event.target.value)}
+                      rows={3}
+                      placeholder="Optional message included in the email"
+                    />
+                  </label>
+                  <label className="check-label">
+                    <input
+                      type="checkbox"
+                      checked={notifyCustomer}
+                      onChange={(event) => setNotifyCustomer(event.target.checked)}
+                    />
+                    Email customer with tracking
+                  </label>
+                  <button className="primary side-btn" type="submit" disabled={savingTracking}>
+                    {savingTracking
+                      ? "Saving…"
+                      : notifyCustomer
+                        ? "Save & email tracking"
+                        : "Save tracking"}
+                  </button>
+                </form>
+                {hasTracking ? (
+                  <div className="tracking-saved">
+                    {request.trackingUrl ? (
+                      <a href={request.trackingUrl} target="_blank" rel="noreferrer">
+                        Open tracking
+                      </a>
+                    ) : null}
+                    <p className="muted tiny">
+                      {request.trackingEmailed
+                        ? `Customer emailed${
+                            request.trackingEmailedAt ? ` · ${formatWhen(request.trackingEmailedAt)}` : ""
+                          }`
+                        : "Tracking saved · customer not emailed yet"}
+                    </p>
+                  </div>
+                ) : null}
               </section>
 
               <section className="panel side-panel">

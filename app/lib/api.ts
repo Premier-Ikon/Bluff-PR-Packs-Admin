@@ -23,6 +23,7 @@ export type PrRequest = {
   status: string;
   name: string;
   email: string;
+  phone?: string;
   company: string;
   instagram: string;
   formattedAddress?: string;
@@ -36,6 +37,13 @@ export type PrRequest = {
   emailed: boolean;
   emailedTeam?: boolean;
   emailedRequester?: boolean;
+  trackingCarrier?: string;
+  trackingNumber?: string;
+  trackingUrl?: string;
+  shippingNote?: string;
+  trackingEmailed?: boolean;
+  trackingEmailedAt?: string | null;
+  trackingUpdatedAt?: string | null;
   shopifyCustomerId?: string;
   shopifyCustomerEmail?: string;
   shopifyDraftOrderId?: string;
