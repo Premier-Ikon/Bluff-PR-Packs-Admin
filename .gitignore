@@ -1,0 +1,16 @@
+node_modules/
+.next/
+out/
+.vercel/
+.DS_Store
+*.pem
+*.key
+.env
+.env.*
+env.yaml
+env.yml
+env.yaml.*
+env.yml.*
+*credentials*.json
+*service-account*.json
+.firebase/
