@@ -2,13 +2,24 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { AdminChrome } from "../../components/AdminChrome";
 import { adminApi, type PrRequest } from "../../lib/api";
 import { useAuth } from "../../lib/AuthProvider";
 import { STATUSES, formatWhen, pieceCount, shipLine } from "../../lib/requestHelpers";
 
 const CARRIERS = ["UPS", "USPS", "FedEx", "DHL", "Other"];
+
+function TrashIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4 7h16" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M7.5 7.5 8.4 19h7.2l.9-11.5" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+      <path d="M10.5 11v5M13.5 11v5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 function formatReserveDate(value: string | null | undefined) {
   if (!value) return "";
@@ -24,6 +35,7 @@ function formatReserveDate(value: string | null | undefined) {
 export default function RequestDetailPage() {
   const params = useParams<{ id: string }>();
   const id = String(params.id || "");
+  const router = useRouter();
   const { token } = useAuth();
   const [request, setRequest] = useState<PrRequest | null>(null);
   const [error, setError] = useState("");
@@ -32,6 +44,8 @@ export default function RequestDetailPage() {
   const [saving, setSaving] = useState(false);
   const [creating, setCreating] = useState(false);
   const [savingTracking, setSavingTracking] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [holdDays, setHoldDays] = useState(7);
   const [trackingCarrier, setTrackingCarrier] = useState("UPS");
   const [trackingNumber, setTrackingNumber] = useState("");
@@ -115,6 +129,20 @@ export default function RequestDetailPage() {
     }
   }
 
+  async function onDelete() {
+    if (!token || !request) return;
+    setDeleting(true);
+    setError("");
+    setNotice("");
+    try {
+      await adminApi(token, { action: "deleteRequest", id: request.id });
+      router.push("/");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not delete that request.");
+      setDeleting(false);
+    }
+  }
+
   async function onSaveTracking(event: FormEvent) {
     event.preventDefault();
     if (!token || !request) return;
@@ -179,15 +207,43 @@ export default function RequestDetailPage() {
                       {` · ${pieces} piece${pieces === 1 ? "" : "s"}`}
                     </p>
                   </div>
-                  <div className="pills">
-                    <span className={`pill${request.status === "new" ? " is-new" : ""}`}>
-                      {request.status}
-                    </span>
-                    {request.emailed ? <span className="pill is-ok">Emailed</span> : null}
-                    {hasOrder ? <span className="pill is-ok">Reserved</span> : null}
-                    {hasTracking ? <span className="pill is-ok">Tracked</span> : null}
+                  <div className="head-tools">
+                    <div className="pills">
+                      <span className={`pill${request.status === "new" ? " is-new" : ""}`}>
+                        {request.status}
+                      </span>
+                      {request.emailed ? <span className="pill is-ok">Emailed</span> : null}
+                      {hasOrder ? <span className="pill is-ok">Reserved</span> : null}
+                      {hasTracking ? <span className="pill is-ok">Tracked</span> : null}
+                    </div>
+                    <button
+                      className="icon-btn"
+                      type="button"
+                      aria-label="Delete request"
+                      disabled={deleting}
+                      onClick={() => setConfirmDelete((open) => !open)}
+                    >
+                      <TrashIcon />
+                    </button>
                   </div>
                 </div>
+                {confirmDelete ? (
+                  <div className="delete-confirm">
+                    <p>
+                      {hasOrder
+                        ? "Delete this request and cancel the Shopify order? Inventory will be restocked. The customer is not emailed."
+                        : "Delete this request from the dashboard?"}
+                    </p>
+                    <div className="delete-confirm-actions">
+                      <button className="ghost" type="button" disabled={deleting} onClick={() => setConfirmDelete(false)}>
+                        Keep
+                      </button>
+                      <button className="primary" type="button" disabled={deleting} onClick={() => void onDelete()}>
+                        {deleting ? "Deleting…" : "Delete"}
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
 
                 <div className="panel-grid">
                   <div>
@@ -270,9 +326,59 @@ export default function RequestDetailPage() {
               </section>
 
               <section className="panel side-panel">
+                <p className="section-label">Shopify</p>
+                {hasOrder ? (
+                  <div className="shopify-done">
+                    <strong>{request.shopifyOrderName}</strong>
+                    <p className="detail-copy">
+                      Under info@gotbluff.com · inventory reserved
+                      {request.shopifyReservedUntil
+                        ? ` through ${formatReserveDate(request.shopifyReservedUntil)}`
+                        : ""}
+                      .
+                    </p>
+                    {request.shopifyOrderUrl ? (
+                      <a className="primary side-btn" href={request.shopifyOrderUrl} target="_blank" rel="noreferrer">
+                        Open in Shopify
+                      </a>
+                    ) : null}
+                  </div>
+                ) : (
+                  <>
+                    <p className="detail-copy side-copy">
+                      Creates a Shopify order under <strong>info@gotbluff.com</strong> with catalog prices, a 100%
+                      product discount, and a $50 shipping fee. The order is marked paid and the sizes are reserved.
+                    </p>
+
+                    <label className="side-label">
+                      Hold for
+                      <select value={holdDays} onChange={(event) => setHoldDays(Number(event.target.value))}>
+                        <option value={7}>7 days</option>
+                        <option value={14}>14 days</option>
+                        <option value={3}>3 days</option>
+                      </select>
+                    </label>
+
+                    <button
+                      className="primary side-btn"
+                      type="button"
+                      disabled={creating}
+                      onClick={() => void onCreateOrder()}
+                    >
+                      {creating ? "Creating…" : "Create order & reserve"}
+                    </button>
+                    <p className="muted tiny">
+                      Requester details stay in the order note. Cancel the Shopify order if you will not ship.
+                    </p>
+                  </>
+                )}
+              </section>
+
+              <section className="panel side-panel">
                 <p className="section-label">Shipping</p>
                 <p className="detail-copy side-copy">
-                  Add a tracking number to email the customer that their PR pack is on the way.
+                  When ShipStation adds tracking in Shopify, it shows up here and the customer is emailed. You can
+                  also enter a number manually.
                 </p>
                 <form className="tracking-form" onSubmit={(event) => void onSaveTracking(event)}>
                   <label className="side-label">
@@ -345,58 +451,10 @@ export default function RequestDetailPage() {
                             request.trackingEmailedAt ? ` · ${formatWhen(request.trackingEmailedAt)}` : ""
                           }`
                         : "Tracking saved · customer not emailed yet"}
+                      {request.trackingSource === "shopify" ? " · Synced from Shopify" : ""}
                     </p>
                   </div>
                 ) : null}
-              </section>
-
-              <section className="panel side-panel">
-                <p className="section-label">Shopify</p>
-                {hasOrder ? (
-                  <div className="shopify-done">
-                    <strong>{request.shopifyOrderName}</strong>
-                    <p className="detail-copy">
-                      Under info@gotbluff.com · inventory reserved
-                      {request.shopifyReservedUntil
-                        ? ` through ${formatReserveDate(request.shopifyReservedUntil)}`
-                        : ""}
-                      .
-                    </p>
-                    {request.shopifyOrderUrl ? (
-                      <a className="primary side-btn" href={request.shopifyOrderUrl} target="_blank" rel="noreferrer">
-                        Open in Shopify
-                      </a>
-                    ) : null}
-                  </div>
-                ) : (
-                  <>
-                    <p className="detail-copy side-copy">
-                      Creates a complimentary Shopify order under <strong>info@gotbluff.com</strong>, ships to this
-                      request address, and reserves the sizes.
-                    </p>
-
-                    <label className="side-label">
-                      Hold for
-                      <select value={holdDays} onChange={(event) => setHoldDays(Number(event.target.value))}>
-                        <option value={7}>7 days</option>
-                        <option value={14}>14 days</option>
-                        <option value={3}>3 days</option>
-                      </select>
-                    </label>
-
-                    <button
-                      className="primary side-btn"
-                      type="button"
-                      disabled={creating}
-                      onClick={() => void onCreateOrder()}
-                    >
-                      {creating ? "Creating…" : "Create order & reserve"}
-                    </button>
-                    <p className="muted tiny">
-                      Requester details stay in the order note. Cancel the Shopify order if you will not ship.
-                    </p>
-                  </>
-                )}
               </section>
             </aside>
           </div>

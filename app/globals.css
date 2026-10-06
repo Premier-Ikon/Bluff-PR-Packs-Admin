@@ -429,6 +429,57 @@ select:focus {
   padding-bottom: 0;
 }
 
+.head-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.icon-btn:hover {
+  color: var(--accent);
+  border-color: rgba(217, 0, 0, 0.28);
+}
+
+.icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.delete-confirm {
+  display: grid;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.delete-confirm p {
+  color: var(--ink-soft);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.delete-confirm-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.delete-confirm-actions .ghost,
+.delete-confirm-actions .primary {
+  height: 40px;
+}
+
 .panel-head h1 {
   margin-top: 6px;
   font-size: clamp(24px, 3.4vw, 32px);

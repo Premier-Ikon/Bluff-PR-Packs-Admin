@@ -123,12 +123,16 @@ export default function AdminPage() {
                       {request.status}
                     </span>
                     {request.shopifyOrderId ? <span className="pill is-ok">Reserved</span> : null}
+                    {request.trackingNumber ? <span className="pill is-ok">Tracked</span> : null}
                   </div>
                   <p className="request-meta">
                     {request.email}
                     {request.phone ? ` · ${request.phone}` : ""}
                     {request.createdAt ? ` · ${formatWhen(request.createdAt)}` : ""}
                     {` · ${pieces} piece${pieces === 1 ? "" : "s"}`}
+                    {request.trackingNumber
+                      ? ` · ${[request.trackingCarrier, request.trackingNumber].filter(Boolean).join(" ")}`
+                      : ""}
                   </p>
                 </div>
                 <span className="request-row-chevron" aria-hidden>

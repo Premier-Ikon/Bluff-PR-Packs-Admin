@@ -40,6 +40,7 @@ export type PrRequest = {
   trackingCarrier?: string;
   trackingNumber?: string;
   trackingUrl?: string;
+  trackingSource?: string;
   shippingNote?: string;
   trackingEmailed?: boolean;
   trackingEmailedAt?: string | null;
