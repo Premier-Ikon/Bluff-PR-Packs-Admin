@@ -11,7 +11,7 @@ export default function AdminPage() {
   const { token, user } = useAuth();
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState<string>("all");
+  const [filter, setFilter] = useState<string>("new");
   const [requests, setRequests] = useState<PrRequest[]>([]);
 
   async function load() {
