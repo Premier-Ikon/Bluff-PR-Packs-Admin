@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, ReactNode, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useAuth } from "../lib/AuthProvider";
 
 const LOGO =
@@ -17,6 +18,7 @@ export function AdminChrome({
   refreshing?: boolean;
 }) {
   const { loading, ready, user, requestCode, verifyCode, logOut } = useAuth();
+  const pathname = usePathname();
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [step, setStep] = useState<"email" | "code">("email");
@@ -145,6 +147,14 @@ export function AdminChrome({
             <img src={LOGO} alt="Got Bluff" />
             <span>PR Admin</span>
           </Link>
+          <nav className="admin-nav">
+            <Link className={pathname === "/" ? "is-on" : ""} href="/">
+              Requests
+            </Link>
+            <Link className={pathname === "/settings" ? "is-on" : ""} href="/settings">
+              Settings
+            </Link>
+          </nav>
           <div className="toolbar-actions">
             {onRefresh ? (
               <button className="ghost" type="button" onClick={onRefresh} disabled={refreshing}>

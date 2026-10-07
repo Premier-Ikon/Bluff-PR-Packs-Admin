@@ -59,6 +59,7 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  flex-wrap: wrap;
 }
 
 .brand {
@@ -81,6 +82,83 @@ select {
   font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
+}
+
+.admin-nav {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-right: auto;
+  margin-left: 28px;
+}
+
+.admin-nav a {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.admin-nav a.is-on,
+.admin-nav a:hover {
+  color: #fff;
+}
+
+.settings-panel {
+  display: grid;
+  gap: 16px;
+  max-width: 760px;
+}
+
+.settings-panel input,
+.settings-panel select {
+  width: 100%;
+}
+
+.banner-preview {
+  position: relative;
+  background: #111;
+  overflow: hidden;
+}
+
+.banner-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  object-position: center center;
+}
+
+.banner-preview-copy {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
+  text-align: center;
+  color: #fff;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.18) 45%, rgba(0, 0, 0, 0.28));
+}
+
+.banner-preview-copy strong {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.banner-preview-copy span {
+  max-width: 460px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+  white-space: pre-line;
 }
 
 .admin-header .ghost {
